@@ -66,7 +66,7 @@ function Input({
               ? "text-red-500 dark:text-red-400"
               : isFocused
               ? "text-blue-500 dark:text-blue-400"
-              : "text-slate-500 dark:text-slate-400"
+              : "text-slate-500 dark:text-slate-400 dark:text-white"
           }`}
         >
           {label} {required && <span className="text-red-500">*</span>}

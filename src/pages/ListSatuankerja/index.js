@@ -23,7 +23,10 @@ function ListSatuanKerjaPage() {
   const {
     fetchTable,
     fetchType,
+    fetchCategories,
     setCurrentMenu,
+    kategoriOptions,
+    statusPegawai,
     location,
     listMenu,
     userData,
@@ -47,10 +50,6 @@ function ListSatuanKerjaPage() {
     setIsOpenModal,
     isOpenPDF,
     setIsOpenPDF,
-    isCheckModal,
-    setIsCheckModal,
-    isDetailModal,
-    setIsDetailModal,
     showModal,
     setShowModal,
     letiantModal,
@@ -64,8 +63,6 @@ function ListSatuanKerjaPage() {
     setJenisFile,
     pdfToOpen,
     types,
-    questions,
-    verifications,
     handleChange,
     handleSubmit,
     currentMenu,
@@ -107,6 +104,7 @@ function ListSatuanKerjaPage() {
   useEffect(() => {
     fetchTable();
     fetchType();
+    fetchCategories();
     setCurrentMenu(getCurrentSatuanKerja(listMenu, location.pathname));
   }, [
     filter.tahun,
@@ -120,6 +118,20 @@ function ListSatuanKerjaPage() {
     listMenu,
     location.pathname,
   ]);
+
+  // Update fungsi toggle agar menyimpan category_id ke payload formData
+  const handleToggleKategori = (katId) => {
+    setFormData((prev) => {
+      const existing = prev.kategori_penerima || [];
+      if (existing.includes(katId)) {
+        return {
+          ...prev,
+          kategori_penerima: existing.filter((id) => id !== katId),
+        };
+      }
+      return { ...prev, kategori_penerima: [...existing, katId] };
+    });
+  };
 
   return (
     <div className="w-full bg-white dark:!bg-transparent dark:border-none rounded-xl shadow-lg dark:shadow-none border border-gray-100 overflow-hidden flex flex-col">
@@ -177,6 +189,8 @@ function ListSatuanKerjaPage() {
             dokumen: null,
             uploaded_by: "",
             catatan: "",
+            kategori_penerima: [],
+            status_pegawai: null,
           });
         }}
         title={
@@ -241,6 +255,87 @@ function ListSatuanKerjaPage() {
               }}
               isSearchable={true}
             />
+
+            {statusPegawai && (
+              // 1. Tambahkan relative dan bg-white pada container
+              <div className="relative flex items-center gap-6 p-4 pt-5 bg-transparent border border-slate-200 rounded-xl mt-1">
+                {/* 2. Ini Floating Label-nya */}
+                <label className="absolute left-3 -top-2.5 px-1.5 bg-white dark:bg-[#0A111E] text-xs font-bold text-slate-500 dark:text-white z-10 pointer-events-none">
+                  Jenis Pegawai <span className="text-red-500">*</span>
+                </label>
+
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 dark:text-white">
+                    <input
+                      type="radio"
+                      name="status_pegawai"
+                      value="pns"
+                      checked={formData.status_pegawai === "pns"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          status_pegawai: e.target.value,
+                        })
+                      }
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    PNS
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 dark:text-white">
+                    <input
+                      type="radio"
+                      name="status_pegawai"
+                      value="pppk"
+                      checked={formData.status_pegawai === "pppk"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          status_pegawai: e.target.value,
+                        })
+                      }
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    PPPK
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* Baris Kondisional: Kategori Penerima (Multi-Select) */}
+            {kategoriOptions.length > 0 && (
+              <div className="relative flex flex-col gap-2 p-4 pt-5 bg-transparent border border-slate-200 dark:border-white/10 rounded-xl mt-1">
+                {/* 2. Ini Floating Label-nya */}
+                <label className="absolute left-3 -top-2.5 px-1.5 bg-white dark:bg-[#0A111E] text-xs font-bold text-slate-500 dark:text-white z-10 pointer-events-none">
+                  Kategori Penerima (Bisa pilih lebih dari satu)
+                  {formData.type_id !== 'ls_bendahara' && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                </label>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-2 mt-1">
+                  {kategoriOptions.map((cat) => {
+                    const isSelected = (
+                      formData?.kategori_penerima || []
+                    ).includes(cat.category_id);
+
+                    return (
+                      <button
+                        key={cat.category_id}
+                        type="button"
+                        onClick={() => handleToggleKategori(cat.category_id)}
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-lg border transition-all text-center ${
+                          isSelected
+                            ? "bg-blue-100 border-blue-500 text-blue-700 shadow-sm"
+                            : "bg-white dark:bg-transparent border-slate-300 text-slate-600 dark:text-white hover:bg-slate-100"
+                        }`}
+                      >
+                        {cat.category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Baris 3: Nama Pengirim (Kondisional) */}
             {isPengajuanPath(location.pathname) && letiantModal === "Add" && (
@@ -309,7 +404,7 @@ function ListSatuanKerjaPage() {
                   required={letiantModal === "Add"}
                   value={formData?.document}
                 />
-                <p className="text-xs text-slate-500 font-medium italic ml-1">
+                <p className="text-xs text-slate-500  dark:text-white font-medium italic ml-1">
                   * Maksimal 1,5 GB untuk jenis GUP & PTUP. Di luar jenis
                   tersebut maksimal 200 MB.
                 </p>
@@ -358,7 +453,7 @@ function ListSatuanKerjaPage() {
           </div>
 
           {/* FOOTER FORM (Action Button) */}
-          <div className="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-xl">
+          <div className="px-5 py-4 border-t border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-transparent flex justify-end rounded-b-xl">
             <Button
               type="submit"
               // Jika Button Anda mendukung className, ini akan membuatnya tampil beda
@@ -424,230 +519,7 @@ function ListSatuanKerjaPage() {
         )}
       </Modal>
 
-      {/* 3. MODAL PENGUJIAN */}
-      <Modal
-        open={isCheckModal}
-        onClose={() => {
-          setIsCheckModal(false);
-          setVariantModal("");
-        }}
-        title="Form Pengujian"
-        width={fileExtension === "pdf" ? "95vw" : "80vw"}
-        maxWidth="95vw"
-        bodyStyle={{ maxHeight: "85vh", overflowY: "auto" }}
-      >
-        <div
-          style={{
-            maxHeight: "80vh",
-            overflowY: "auto",
-            padding: window.innerWidth <= 768 ? "2px" : "0 20px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: window.innerWidth <= 768 ? "column" : "row",
-              gap: 20,
-              width: "100%",
-            }}
-          >
-            {/* Bagian Kiri (Dokumen) */}
-            {fileExtension === "pdf" ? (
-              <div
-                style={{
-                  width: window.innerWidth <= 768 ? "100%" : "50%",
-                  maxHeight: window.innerWidth <= 768 ? "45vh" : "100%",
-                  overflowY: "auto",
-                }}
-              >
-                <CustomPDFViewer pdfSource={pdfToOpen} />
-              </div>
-            ) : (
-              <div className="w-full md:w-1/2 flex items-center justify-center p-6 border rounded-xl bg-gray-50">
-                <div className="text-center">
-                  <Folder
-                    size={84}
-                    strokeWidth={1.5}
-                    className="text-blue-500 mx-auto"
-                  />
-                  <p className="mt-4 font-semibold text-gray-700">
-                    File RAR / ZIP
-                  </p>
-                  <Button
-                    onClick={() => window.open(pdfToOpen)}
-                    className="mt-4"
-                  >
-                    Download untuk Cek
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Bagian Kanan (Form) */}
-            <div style={{ width: window.innerWidth <= 768 ? "100%" : "50%" }}>
-              <form
-                onSubmit={handleSubmit}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 20,
-                  padding: 10,
-                }}
-              >
-                <Input
-                  label="No. SPP"
-                  name="no_spp"
-                  value={formData?.no_spp}
-                  disabled
-                />
-                <Select
-                  label="Jenis SPP"
-                  name="type"
-                  value={formData?.type_id}
-                  disabled
-                  options={(types || []).map((q) => ({
-                    label: q.type,
-                    value: q.type_id,
-                  }))}
-                />
-                <ChecklistComponent
-                  title="Kelengkapan"
-                  items={(questions || []).map((q) => ({
-                    id: q.id_question,
-                    label: q.text,
-                  }))}
-                  selectedIds={formData.kelengkapan}
-                  onChange={(updated) =>
-                    setFormData((prev) => ({ ...prev, kelengkapan: updated }))
-                  }
-                  disabled={formData.status === "sp2d"}
-                />
-                <Select
-                  label="Status"
-                  name="status"
-                  value={formData?.status}
-                  onChange={handleChange}
-                  options={[
-                    { label: "Ditolak", value: "reject" },
-                    { label: "Diproses (Lengkap)", value: "approved" },
-                    { label: "Diproses (Butuh Perbaikan)", value: "fix" },
-                    { label: "SP2D", value: "sp2d" },
-                  ]}
-                  isOpen={selectOpenStatus}
-                  setIsOpen={(open) => setSelectOpenStatus(open)}
-                />
-                <ChecklistComponent
-                  title="Verifikasi"
-                  items={(verifications || []).map((q) => ({
-                    id: q.id_question,
-                    label: q.text,
-                  }))}
-                  selectedIds={formData?.verifikasi}
-                  onChange={(updated) =>
-                    setFormData((prev) => ({ ...prev, verifikasi: updated }))
-                  }
-                  disabled={formData.status === "sp2d"}
-                />
-                <Textarea
-                  label="Catatan"
-                  name="catatan"
-                  value={formData?.catatan ?? formData?.feedback ?? ""}
-                  onChange={handleChange}
-                />
-                <Button type="submit" style={{ width: "100%" }}>
-                  Submit
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 4. MODAL DETAIL */}
-      <Modal
-        open={isDetailModal}
-        onClose={() => {
-          setIsDetailModal(false);
-          setVariantModal("");
-        }}
-        title="Detail"
-        style={{ maxWidth: "600px", width: "90vw" }}
-      >
-        <div style={{ padding: 20, maxHeight: "70vh", overflowY: "auto" }}>
-          <form style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <Input
-              label="No. SPP"
-              name="no_spp"
-              value={formData?.no_spp}
-              disabled
-            />
-            <Select
-              label="Jenis SPP"
-              name="type"
-              value={formData?.type_id}
-              disabled
-              options={(types || []).map((q) => ({
-                label: q.type,
-                value: q.type_id,
-              }))}
-            />
-            <Select
-              label="Status"
-              name="status"
-              value={formData?.status}
-              disabled
-              options={[{ label: "Diproses", value: formData?.status }]}
-            />
-
-            <div>
-              <label className="font-semibold text-gray-700">Kelengkapan</label>
-              <ul className="mt-2 space-y-2">
-                {(questions || []).map((q) => (
-                  <li
-                    key={q.id_question}
-                    className="flex gap-2 items-center text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData?.kelengkapan?.includes(q.id_question)}
-                      readOnly
-                      className="rounded text-blue-500"
-                    />
-                    <span>{q.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <label className="font-semibold text-gray-700">Verifikasi</label>
-              <ul className="mt-2 space-y-2">
-                {(verifications || []).map((v) => (
-                  <li
-                    key={v.id_question}
-                    className="flex gap-2 items-center text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData?.verifikasi?.includes(v.id_question)}
-                      readOnly
-                      className="rounded text-blue-500"
-                    />
-                    <span>{v.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <Textarea
-              label="Catatan"
-              name="catatan"
-              value={formData?.feedback ?? "-"}
-              disabled
-            />
-          </form>
-        </div>
-      </Modal>
-
+      {/* 3. MODAL MERGE PDF */}
       <Modal
         open={isOpenMergeModal}
         onClose={() => {
@@ -688,14 +560,14 @@ function ListSatuanKerjaPage() {
                 onChange={(e) => setArchiveFile(e.target.files[0])}
                 required={true}
               />
-              <p className="text-xs text-slate-500 font-medium italic ml-1 mt-1.5">
+              <p className="text-xs text-slate-500 dark:text-white font-medium italic ml-1 mt-1.5">
                 * Maksimal ukuran file kompresi 50 MB.
               </p>
             </div>
           </div>
 
           {/* FOOTER FORM (Action Button) */}
-          <div className="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-xl">
+          <div className="px-5 py-4 border-t border-slate-100 dark:border-white/10 bg-slate-50  dark:bg-transparent flex justify-end gap-3 rounded-b-xl">
             <Button
               type="submit"
               disabled={isLoadingMerge}

@@ -107,20 +107,20 @@ function FileInput({
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {/* Label Title */}
-      <label className="text-md text-[#ccc]-700 ml-1">
+      <label className="text-md text-[#ccc]-700 dark:text-white ml-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       {/* Tampilan Dokumen Existing */}
       {value && !newFileName && (
-        <div className="mb-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+        <div className="mb-2 p-3 bg-blue-50 dark:bg-transparent border border-blue-100 dark:border-white/10 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-2 overflow-hidden">
             <File size={16} className="text-blue-500 shrink-0" />
             <a
               href={value.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:text-blue-800 underline truncate font-medium"
+              className="text-sm text-blue-600 dark:text-white hover:text-blue-800 underline truncate font-medium"
               title={value.filename}
             >
               {value.filename || "Lihat Dokumen"}

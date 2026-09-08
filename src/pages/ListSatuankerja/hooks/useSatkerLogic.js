@@ -50,6 +50,7 @@ export function useSatkerLogic() {
 
   // Form & Input States
   const [types, setTypes] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [verifications, setVerifications] = useState([]);
   const [jenisFile, setJenisFile] = useState("file");
@@ -69,6 +70,8 @@ export function useSatkerLogic() {
     verifikasi: [],
     is_edit: null,
     link: "",
+    kategori_penerima: [],
+    status_pegawai: null,
     jml_hal: 0,
   });
   const [archiveFile, setArchiveFile] = useState("");
@@ -177,6 +180,24 @@ export function useSatkerLogic() {
     }
   };
 
+  const fetchCategories = async (id) => {
+    try {
+      if (id) {
+        const data = await apiRequest({ url: `/pa/spp/category?id=` + id });
+        if (data.success) {
+          setCategories(data.data[0]);
+        }
+      } else {
+        const data = await apiRequest({ url: `/pa/spp/category?id=` });
+        if (data.success) {
+          setCategories(data.data);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const submitData = async (formDataToSubmit) => {
     try {
       let CryptoJS = require("crypto-js");
@@ -190,6 +211,12 @@ export function useSatkerLogic() {
       payload.append("kode_biro", currentMenu?.code);
       payload.append("no_spp", formDataToSubmit.no_spp);
       payload.append("jenis_spp", formDataToSubmit.type);
+      payload.append("employee_status", formDataToSubmit.status_pegawai);
+      if (formData.kategori_penerima && formData.kategori_penerima.length > 0) {
+        formData.kategori_penerima.forEach((cat) => {
+          payload.append("category[]", cat);
+        });
+      }
       payload.append("tahun", formDataToSubmit.tahun);
       payload.append("dokumen", formDataToSubmit.dokumen[0]);
       payload.append("link", encryptedLink);
@@ -280,10 +307,13 @@ export function useSatkerLogic() {
     try {
       const payload = new FormData();
       let CryptoJS = require("crypto-js");
-      let encryptedLink = CryptoJS.AES.encrypt(
-        formDataToEdit.link || "",
-        "YzDWFXF8LmfUMdOn0RtZ0rYC90zF5wpoz87oCk",
-      ).toString();
+      let encryptedLink =
+        formDataToEdit.link == null
+          ? null
+          : CryptoJS.AES.encrypt(
+              formDataToEdit.link || "",
+              "YzDWFXF8LmfUMdOn0RtZ0rYC90zF5wpoz87oCk",
+            ).toString();
       const finalJmlHal = Number(formDataToEdit.jml_hal) || 0;
 
       payload.append(
@@ -307,6 +337,15 @@ export function useSatkerLogic() {
           ? formDataToEdit.type_id
           : formDataToEdit.type,
       );
+      payload.append("employee_status", formDataToEdit.status_pegawai);
+      if (
+        formDataToEdit.kategori_penerima &&
+        formDataToEdit.kategori_penerima.length > 0
+      ) {
+        formDataToEdit.kategori_penerima.forEach((cat) => {
+          payload.append("category[]", cat);
+        });
+      }
       payload.append("tahun", formDataToEdit.tahun);
       payload.append("link", encryptedLink);
       payload.append("jml_hal", finalJmlHal);
@@ -424,7 +463,9 @@ export function useSatkerLogic() {
   const checklistIsValid = (dataToCheck = formData) => {
     const strictStatuses = ["approved", "sp2d"];
 
-    const kelengkapanChecked = dataToCheck.kelengkapan.map((item) => item.value);
+    const kelengkapanChecked = dataToCheck.kelengkapan.map(
+      (item) => item.value,
+    );
     const verifikasiChecked = dataToCheck.verifikasi.map((item) => item.value);
 
     const allKelengkapanChecked = (questions || []).every((q) =>
@@ -435,22 +476,24 @@ export function useSatkerLogic() {
     );
 
     const isAllChecked = allKelengkapanChecked && allVerifikasiChecked;
-    const hasQuestions = (questions?.length > 0) || (verifications?.length > 0);
+    const hasQuestions = questions?.length > 0 || verifications?.length > 0;
 
     if (strictStatuses.includes(dataToCheck.status)) {
       if (!isAllChecked) {
-        return { 
-          valid: false, 
-          message: "Semua Kelengkapan & Verifikasi harus dicentang untuk status ini." 
+        return {
+          valid: false,
+          message:
+            "Semua Kelengkapan & Verifikasi harus dicentang untuk status ini.",
         };
       }
     }
 
     if (isAllChecked && hasQuestions) {
       if (!strictStatuses.includes(dataToCheck.status)) {
-        return { 
-          valid: false, 
-          message: "Karena semua persyaratan terpenuhi, status wajib diubah menjadi 'Diproses (Lengkap)'." 
+        return {
+          valid: false,
+          message:
+            "Karena semua persyaratan terpenuhi, status wajib diubah menjadi 'Diproses (Lengkap)'.",
         };
       }
     }
@@ -498,6 +541,23 @@ export function useSatkerLogic() {
         if (!formData?.["no_spp"] || !formData.tahun || !formData.type) {
           toast.error("Mohon lengkapi semua field yang diperlukan.");
           return;
+        }
+      }
+
+      const typeName =
+        (types || [])
+          .find((t) => t.type_id === formData?.type_id)
+          ?.type?.toLowerCase() || "";
+
+      const isLsBendahara =
+        typeName.includes("ls bendahara") || typeName.includes("ls_bendahara");
+
+      if (kategoriOptions.length > 0) {
+        const selectedKategori = formData?.kategori_penerima || [];
+
+        if (!isLsBendahara && selectedKategori.length === 0) {
+          toast.error("Kategori Penerima wajib dipilih minimal satu!");
+          return; // Hentikan proses submit
         }
       }
 
@@ -569,6 +629,8 @@ export function useSatkerLogic() {
         catatan: "",
         verifikasi: [],
         link: "",
+        kategori_penerima: [],
+        status_pegawai: null,
         jml_hal: 0,
       });
       fetchTable();
@@ -598,7 +660,12 @@ export function useSatkerLogic() {
       setJenisFile("file");
     }
     setVariantModal("Edit");
-    setFormData({ ...row, type: row.jenis_spp, link: row.document?.path });
+    setFormData({
+      ...row,
+      type: row.jenis_spp,
+      link: jenisFile == "file" ? null : row.document?.path,
+      kategori_penerima: row.category || [],
+    });
     setIsOpenModal(true);
   };
 
@@ -740,7 +807,10 @@ export function useSatkerLogic() {
         };
 
         // 🔥 GANTI URL INI SESUAI ENDPOINT MERGE PDF LU
-        xhr.open("POST", `${process.env.REACT_APP_API_BASE_URL}/archive/pdf/merge`);
+        xhr.open(
+          "POST",
+          `${process.env.REACT_APP_API_BASE_URL}/archive/pdf/merge`,
+        );
         xhr.setRequestHeader("Authorization", `Bearer ${defaultToken}`);
         xhr.send(formData);
       });
@@ -755,6 +825,75 @@ export function useSatkerLogic() {
     }
   };
 
+  const selectedTypeName =
+    (types || [])
+      .find((t) => t.type_id === formData?.type_id)
+      ?.type?.toLowerCase() || "";
+
+  const getKategoriOptions = (name, masterCategories = []) => {
+    if (!name) return [];
+    const typeName = name.toLowerCase();
+    const biroIds = [
+      "rokeu",
+      "romas",
+      "rokum",
+      "rosdm",
+      "rocan",
+      "roum",
+      "roks",
+      "ppsdm",
+      "poltek",
+    ];
+    let allowedIds = [];
+
+    // 2. Tentukan ID apa saja yang boleh muncul berdasarkan nama tipe SPP
+    if (typeName.includes("gaji")) {
+      allowedIds = [...biroIds];
+    } else if (
+      typeName.includes("tukin") ||
+      typeName.includes("tunjangan kinerja")
+    ) {
+      allowedIds = [
+        "menteri",
+        "wakil_menteri",
+        "staf_khusus",
+        "staf_ahli",
+        "sekjen",
+        "ajudan",
+        ...biroIds,
+      ];
+    } else if (typeName.includes("ppnpn")) {
+      allowedIds = [...biroIds, "wakil_menteri", "staf_khusus"];
+    } else if (typeName.includes("uang makan")) {
+      allowedIds = [...biroIds];
+    } else if (typeName.includes("uang lembur")) {
+      allowedIds = [...biroIds];
+    } else if (
+      typeName.includes("ls bendahara") ||
+      typeName.includes("ls_bendahara")
+    ) {
+      allowedIds = ["dom", "dowm"];
+    }
+
+    // 3. Kembalikan data utuh dari DB yang lolos filter
+    return masterCategories.filter((cat) =>
+      allowedIds.includes(cat.category_id),
+    );
+  };
+
+  const kategoriOptions = getKategoriOptions(selectedTypeName, categories);
+
+  console.log(selectedTypeName.includes('tukin'))
+  const statusPegawai = [
+    "gaji",
+    "tukin",
+    "tunjangan kinerja",
+    "uang_makan",
+    "uang_lembur",
+    "uang makan",
+    "uang lembur",
+  ].some((keyword) => selectedTypeName.includes(keyword));
+
   return {
     // Data & Context
     userData,
@@ -763,6 +902,7 @@ export function useSatkerLogic() {
     columns,
     dataTable,
     types,
+    categories,
     questions,
     verifications,
     errorMessage,
@@ -821,5 +961,8 @@ export function useSatkerLogic() {
     fetchType,
     editData,
     fetchTable,
+    fetchCategories,
+    kategoriOptions,
+    statusPegawai,
   };
 }
