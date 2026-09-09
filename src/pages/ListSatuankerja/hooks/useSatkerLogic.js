@@ -211,7 +211,7 @@ export function useSatkerLogic() {
       payload.append("kode_biro", currentMenu?.code);
       payload.append("no_spp", formDataToSubmit.no_spp);
       payload.append("jenis_spp", formDataToSubmit.type);
-      payload.append("employee_status", formDataToSubmit.status_pegawai);
+      payload.append("employee_status", formDataToSubmit.status_pegawai ?? null);
       if (formData.kategori_penerima && formData.kategori_penerima.length > 0) {
         formData.kategori_penerima.forEach((cat) => {
           payload.append("category[]", cat);
@@ -337,7 +337,7 @@ export function useSatkerLogic() {
           ? formDataToEdit.type_id
           : formDataToEdit.type,
       );
-      payload.append("employee_status", formDataToEdit.status_pegawai);
+      payload.append("employee_status", formDataToEdit.status_pegawai ?? null);
       if (
         formDataToEdit.kategori_penerima &&
         formDataToEdit.kategori_penerima.length > 0
